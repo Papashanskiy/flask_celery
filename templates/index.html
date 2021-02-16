@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>mr 2</title>
+</head>
+<body>
+
+    <h1>Раздробленная загрузка контента по нажатию кнопки</h1>
+    <button id="load">Загрузить</button>
+    <div id="content"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script>
+        $(function () {
+            function startLongTasks() {
+                startLongTask();
+                startLongTask();
+                startLongTask();
+            }
+            function startLongTask() {
+                let div = $("<div class='item'><div>Loading...</div><div>0%</div></div>");
+                $('#content').append(div);
+
+                $.ajax({
+                    url: '/longtask',
+                    type: 'POST',
+                    success: function (data, status, request) {
+                        let statusUrl = request.getResponseHeader('Location');
+                        updateProgress(statusUrl, div[0]);
+                    },
+                    error: function (xhr) {
+                        alert('Unexpected error');
+                    }
+                })
+            }
+            function updateProgress(statusUrl, statusDiv) {
+                $.getJSON(statusUrl, function (data) {
+                    let percent = parseInt(data['current'] * 100 / data['total']);
+                    $(statusDiv.childNodes[1]).text(percent + '%');
+                    if (data['state'] != 'PENDING' && data['state'] != 'PROCESS') {
+                        if ('result' in data) {
+                            $(statusDiv.childNodes[0]).empty();
+                            $(statusDiv.childNodes[0]).text('Result: ' + data['result']);
+                        }
+                        else {
+                            $(statusDiv.childNodes[0]).empty();
+                            $(statusDiv.childNodes[0]).text('Result: ' + data['state']);
+                        }
+                    }
+                    else {
+                        setTimeout(function () {
+                            updateProgress(statusUrl, statusDiv);
+                        }, 1000);
+                    }
+                })
+            }
+            $('#load').click(startLongTasks);
+        });
+    </script>
+</body>
+</html>
